@@ -30,6 +30,16 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends python3 \
  && rm -rf /var/lib/apt/lists/* \
  && python3 --version
 COPY desk_auth_proxy.py /usr/local/bin/desk_auth_proxy.py
+COPY xfce_fix.sh /usr/local/bin/xfce_fix.sh
+# --- XFCE repair: clear stale session/xfconf/X-lock state before the
+# desktop starts (see xfce_fix.sh). Inserted BEFORE start_kasmvnc so it
+# runs synchronously, before kasm_startup.sh launches startxfce4.
+# Build fails if the hook is absent.
+RUN chmod +x /usr/local/bin/xfce_fix.sh /usr/local/bin/desk_auth_proxy.py \
+ && sed -i 's|^start_kasmvnc$|/usr/local/bin/xfce_fix.sh || true\nstart_kasmvnc|' /dockerstartup/vnc_startup.sh \
+ && grep -q 'xfce_fix.sh' /dockerstartup/vnc_startup.sh || { echo "xfce_fix hook missing" >&2; exit 1; } \
+ && echo "xfce_fix hook OK" \
+ && grep -n 'xfce_fix' /dockerstartup/vnc_startup.sh || true
 RUN chmod +x /usr/local/bin/desk_auth_proxy.py \
  && sed -i 's|^start_kasmvnc$|start_kasmvnc\n(while true; do python3 /usr/local/bin/desk_auth_proxy.py; echo "desk-auth-proxy exited, restarting in 2s" >\&2; sleep 2; done) \&|' /dockerstartup/vnc_startup.sh \
  && grep -q 'desk_auth_proxy.py' /dockerstartup/vnc_startup.sh || { echo "proxy hook missing" >&2; exit 1; } \
