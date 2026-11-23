@@ -36,7 +36,7 @@ COPY xfce_fix.sh /usr/local/bin/xfce_fix.sh
 # runs synchronously, before kasm_startup.sh launches startxfce4.
 # Build fails if the hook is absent.
 RUN chmod +x /usr/local/bin/xfce_fix.sh /usr/local/bin/desk_auth_proxy.py \
- && sed -i 's|^start_kasmvnc$|/usr/local/bin/xfce_fix.sh || true\nstart_kasmvnc|' /dockerstartup/vnc_startup.sh \
+ && python3 -c "import pathlib; p=pathlib.Path('/dockerstartup/vnc_startup.sh'); t=p.read_text(); old='start_kasmvnc\n'; assert t.count(old)==1, t.count(old); p.write_text(t.replace(old, '/usr/local/bin/xfce_fix.sh || true\n'+old, 1))" \
  && grep -q 'xfce_fix.sh' /dockerstartup/vnc_startup.sh || { echo "xfce_fix hook missing" >&2; exit 1; } \
  && echo "xfce_fix hook OK" \
  && grep -n 'xfce_fix' /dockerstartup/vnc_startup.sh || true
